@@ -1,0 +1,131 @@
+﻿@model Books.Core.BookViewModel
+
+<style>
+    .form-width {
+        width: 550px;
+    }
+</style>
+
+<div class="form-width">
+    <div class="form-horizontal">
+        @using (Html.BeginForm())
+        {
+        @Html.AntiForgeryToken()
+        @Html.ValidationSummary(true)
+        @Html.HiddenFor(m=>m.BookId)
+        @Html.HiddenFor(m => m.BookImageUrl)
+
+        <div class="form-group">
+            @Html.LabelFor(m => m.Title, new {@class = "control-label col-md-4"})
+            @Html.TextBoxFor(m => m.Title, new {htmlAttributes = new {@class = "form-control"}})
+            @Html.ValidationMessageFor(m => m.Title, "", new {@class = "text-danger"})
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(m => m.Authors, new { @class = "control-label col-md-4" })
+            @Html.ValidationMessage("Authors", new { @class = "text-danger" })
+            <div id="authors">
+                @for (var i = 0; i < Model.AuthorsList.Count; i++)
+                {
+                    @Html.HiddenFor(m => m.AuthorsList[i], new { id = "Author" + i })
+                }
+            </div>
+        </div>
+        <div class="form-group">
+            <div id="MultiselectAuthors" class="form-control"></div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(m => m.PageCount, new { @class = "control-label col-md-4" })
+            @Html.TextBoxFor(m => m.PageCount, new { htmlAttributes = new { @class = "form-control" } })
+            @Html.ValidationMessageFor(m => m.PageCount, "", new { @class = "text-danger" })
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(m => m.Publisher, new { @class = "control-label col-md-4" })
+            @Html.TextBoxFor(m => m.Publisher, new { htmlAttributes = new { @class = "form-control" } })
+            @Html.ValidationMessageFor(m => m.Publisher, "",  new { @class = "text-danger" })
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(m => m.Year, new { @class = "control-label col-md-4" })
+            @Html.TextBoxFor(m => m.Year, new { htmlAttributes = new { @class = "form-control" } })
+            @Html.ValidationMessageFor(m => m.Year, "", new { @class = "text-danger" })
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(m => m.BookImageUrl, new {@class = "control-label col-md-4"})
+            <div id="imageBlock">
+                @if (!String.IsNullOrWhiteSpace(Model.BookImageUrl))
+                {
+                    <img class='img-thumb' src=@Model.BookImageUrl alt=""/>
+                }
+            </div>
+        </div>
+        }
+        <div>
+            <input type="file" name="upload" id="uploadFile"/><br />
+            <button id="submitImg">Load</button>
+        </div>
+    </div>
+
+</div>
+<script>
+
+    @{
+        var bookId = Model.BookId;
+    }
+
+    $('#submitImg').on('click', function (e) {
+        e.preventDefault();
+        var files = document.getElementById('uploadFile').files;
+        if (files.length > 0) {
+            if (window.FormData !== undefined) {
+                var data = new FormData();
+                data.append("file", files[0]);
+                $.ajax({
+                    type: "POST",
+                    url: "@Url.Action("Upload", "Books")?id=" + "@bookId",
+                    contentType: false,
+                    processData: false,
+                    data: data,
+                    success: function (result) {
+                        $('#imageBlock').empty();
+                        $('#imageBlock').append("<img class='img-thumb' src=\"" + result + "\" alt=\"\"/>");
+                        $('#BookImageUrl').val(result);
+                    },
+                    error: function (xhr, status, p3) {
+                        alert(xhr.responseText);
+                    }
+                });
+            }
+        }
+    });
+
+    $(function () {
+
+        var authorCount = @Model.AuthorsList.Count;
+        var initData = [];
+        for (var i = 0; i < authorCount; i++) {
+            initData[i] = $("#Author" + i).val();
+        }
+
+        var ms = $('#MultiselectAuthors').magicSuggest({
+            allowFreeEntries: true,
+            style: 'border-radius: 0 !important;',
+            allowDuplicates: false,
+            value: initData
+        });
+
+        ms.combobox = $('<div/>', {
+            'class': 'ms-res-ctn dropdown-menu'
+        }).height(0);
+
+
+        $(ms).on('selectionchange', function(e, m) {
+            var data = m.getValue();
+            var dataLength = data.length;
+            $('#authors').empty();
+            for (var i = 0; i < dataLength; i++) {
+                $('#authors').append("<input id=\"Author" + i + "\" name=\"AuthorsList["+ i +"]\" type=\"hidden\">");
+                $("#Author" + i).val(data[i]);
+            }
+        });
+    });
+</script>

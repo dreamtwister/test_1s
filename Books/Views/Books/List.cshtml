@@ -1,0 +1,164 @@
+﻿
+
+<h2>Books</h2>
+
+<div>
+    <table id="booksDataTable" class="table table-responsive table-striped">
+        <thead>
+        <tr>
+            <th>Header</th>
+            <th>Authors</th>
+            <th>First name</th>
+            <th>Last name</th>
+            <th>Page count</th>
+            <th>Publisher</th>
+            <th>Year</th>
+            <th>Image</th>
+            <th></th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div> 
+
+<div>
+    <button id="create-book">Add book</button>
+</div>
+
+<div id="dialog-delete" title="Delete record">
+
+</div>
+
+<script type="text/javascript">
+
+    $('#booksDataTable').dataTable({
+        "bProcessing": true,
+        "bServerSide": true,
+        "processing": true,
+        "serverSide": true,
+        "paging": true,
+        "deferRender": true,
+        "bInfo": false,
+            "ajax": {
+                "url": "@Url.Action("GetBooks", "Books")",
+            "type": "POST",
+            "datatype": "json"
+        },
+                "columns": [
+        { "data": "Title", "autoWidth": true },
+        { "data": "Authors", "autoWidth": true, "bSortable": false },
+        { "data": "AuthorFirstName", "autoWidth": true, "bSortable": false },
+        { "data": "AuthorLastName", "autoWidth": true, "bSortable": false },
+        { "data": "PageCount", "autoWidth": true, "bSortable": false },
+        { "data": "Publisher", "autoWidth": true, "bSortable": false },
+        { "data": "Year", "autoWidth": true },
+        {
+            "autoWidth": true,
+            "bSortable": false,
+            "render": function(data, type, item)
+            {
+                var img = null;
+                if (!!item.BookImageUrl) {
+                    img = "<img class='img-thumb' src=\"" + item.BookImageUrl + "\"/>";
+                }
+                return img;
+            }
+        },
+        {
+            "autoWidth": true,
+            "bSortable": false,
+            "render": function (data, type, item) {
+
+                var buttons = '<a class="btn" onclick="editBook('
+                    + '\'' + item.BookId +'\'' + 
+                    ')" title="Edit"><i class="glyphicon glyphicon-pencil"></i></a>' +
+                    '<a class="btn" onclick="deleteBook('
+                    + '\'' + item.BookId +'\'' +
+                    ')" title="Delete"><i class="glyphicon glyphicon-remove"></i></a>';
+                return buttons;
+            }
+        },
+        { "data": "BookId", "visible": false }
+        ]
+    });
+
+    var bookTable = $('#booksDataTable').DataTable();
+
+
+    $('#create-book').on("click",
+        function(e) {
+            e.preventDefault();
+            editBook(0);
+        });
+
+    var dialog;
+
+    function editBook(sender) {
+        var url = "@Url.Action("GetBook", "Books")?id=" + sender;
+
+        dialog = $("<div id='dialogContent'></div>")
+            .addClass("dialog")
+            .appendTo("body")
+            .load(url)
+            .dialog({
+                title: "Create/update",
+                close: function () { $(this).remove() },
+                modal: true,
+                height: "auto",
+                width: 650,
+                buttons: {
+                    "Save": function () {
+                        $.ajax({
+                            url: "@Url.Action("EditBook", "Books")",
+                            type: "POST",
+                        data: $('form').serialize(),
+                        datatype: "json",
+                        success: function (result) {
+                            if (result === "") {
+                                $(dialog).dialog("close");
+                                bookTable.ajax.reload();
+                                bookTable.draw();
+                            }
+                            else $("#dialogContent").html(result);
+                        },
+                    });
+                },
+                "Cancel": function () {
+                    $(dialog).dialog("close");
+                }
+            }
+        });
+    }
+
+    function deleteBook(sender) {
+        $(function () {
+            $("#dialog-delete").dialog({
+                resizable: false,
+                height: "auto",
+                width: 400,
+                modal: true,
+                buttons: {
+                    "Delete": function () {
+                        $.ajax({
+                            type: 'POST',
+                            url: '@Url.Action("DeleteBook", "Books")',
+                            data: {
+                                Id: sender
+                            },
+                            dataType: 'json',
+                            success: function () {
+                                bookTable.ajax.reload();
+                            }
+                        });
+                        $(this).dialog("close");
+                    },
+                    "Cancel": function () {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+        });
+        $("#dialog-delete").dialog("open");
+    }
+</script>
